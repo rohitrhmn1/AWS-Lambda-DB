@@ -1,4 +1,5 @@
 import io
+import logging
 import os
 import subprocess
 from typing import Dict, Any
@@ -6,6 +7,9 @@ from typing import Dict, Any
 import arrow
 import boto3
 from aws_lambda_typing.context import Context
+
+logger = logging.getLogger()
+logger.setLevel("INFO")
 
 DB_USER = os.environ.get('DB_USER')
 DB_PASSWORD = os.environ.get('DB_PASSWORD')
@@ -42,15 +46,17 @@ def dump_postgres_database(name):
     file = io.BytesIO()
     file.write(result)
     file.seek(0)
+    logger.info("File created successfully.")
     return file
 
 
 def upload_file(folder_name, file):
-    date_format = arrow.get().format('YYYY-MM-DD')
+    date_format = arrow.get().to('Asia/Kolkata').format('YYYY-MM-DD')
     path = f"{folder_name}/{date_format}/"
     objects = client.list_objects(Bucket=AWS_STORAGE_BUCKET_NAME, Prefix=path)
     count = len(objects.get('Contents', []))
     file_name = f"backup_{count + 1}.sql"
+    logger.info('Uploading file to S3.')
     return client.put_object(
         Body=file.getvalue(),
         Bucket=AWS_STORAGE_BUCKET_NAME,
